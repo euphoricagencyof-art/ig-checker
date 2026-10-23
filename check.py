@@ -11,7 +11,7 @@ STATE_SESSION = json.loads(os.environ["IG_SESSION"])
 TG = (os.environ.get("TG_TOKEN"), os.environ.get("TG_CHAT"))
 TH_ALERT, TH_REPORT = os.environ.get("TG_THREAD_ALERT"), os.environ.get("TG_THREAD_REPORT")
 TABS = 3
-MIN_GAP = int(os.environ.get("MIN_GAP", "540"))        # не чаще, чем раз в 9 минут (дубли расписания отсекаем)
+MIN_GAP = int(os.environ.get("MIN_GAP", "420"))        # не чаще, чем раз в 7 минут (дубли расписания отсекаем)
 API = f"https://api.github.com/repos/{REPO}/contents"
 H = {"Authorization": f"Bearer {TOKEN}", "Accept": "application/vnd.github+json"}
 
