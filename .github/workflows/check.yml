@@ -13,17 +13,12 @@ jobs:
   check:
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    container:
+      image: mcr.microsoft.com/playwright/python:v1.49.0-jammy     # браузер уже внутри — без установки на каждом запуске
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with: { python-version: "3.11" }
-      - uses: actions/cache@v4
-        with:
-          path: ~/.cache/ms-playwright
-          key: pw-chromium-v1
       - run: echo "T0=$(date +%s)" >> $GITHUB_ENV
-      - run: pip install playwright playwright-stealth requests
-      - run: playwright install --with-deps chromium
+      - run: pip install playwright==1.49.0 playwright-stealth requests
       - id: chk
         run: python check.py
         env:
@@ -39,6 +34,14 @@ jobs:
         if: always()
         env:
           GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
         run: |
-          now=$(date +%s); wait=$(( 600 - (now - T0) )); [ $wait -gt 0 ] && sleep $wait
-          gh workflow run check.yml --repo ${{ github.repository }}
+          python - <<'PY'
+          import os, time, requests
+          t0 = int(os.environ["T0"]); wait = 600 - (time.time() - t0)
+          if wait > 0: time.sleep(wait)
+          r = requests.post(f"https://api.github.com/repos/{os.environ['REPO']}/actions/workflows/check.yml/dispatches",
+                            headers={"Authorization": "Bearer " + os.environ["GH_TOKEN"], "Accept": "application/vnd.github+json"},
+                            json={"ref": "main"}, timeout=30)
+          print("next dispatch:", r.status_code)
+          PY
