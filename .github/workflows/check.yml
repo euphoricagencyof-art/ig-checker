@@ -1,0 +1,31 @@
+name: check
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '*/5 * * * *'     # подстраховка; основной запуск каждые 10 мин делает внешний будильник
+concurrency:
+  group: check
+  cancel-in-progress: false
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: pw-chromium-v1
+      - run: pip install playwright playwright-stealth requests
+      - run: playwright install --with-deps chromium
+      - run: python check.py
+        env:
+          IG_SESSION: ${{ secrets.IG_SESSION }}
+          DATA_TOKEN: ${{ secrets.DATA_TOKEN }}
+          DATA_REPO: ${{ secrets.DATA_REPO }}
+          TG_TOKEN: ${{ secrets.TG_TOKEN }}
+          TG_CHAT: ${{ secrets.TG_CHAT }}
+          TG_THREAD_ALERT: ${{ secrets.TG_THREAD_ALERT }}
+          TG_THREAD_REPORT: ${{ secrets.TG_THREAD_REPORT }}
