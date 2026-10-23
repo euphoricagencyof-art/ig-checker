@@ -2,14 +2,17 @@ name: check
 on:
   workflow_dispatch:
   schedule:
-    - cron: '*/5 * * * *'     # подстраховка; основной запуск каждые 10 мин делает внешний будильник
+    - cron: '*/5 * * * *'     # страховка: если цепочка оборвалась, расписание её перезапускает
 concurrency:
   group: check
   cancel-in-progress: false
+permissions:
+  contents: read
+  actions: write
 jobs:
   check:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -18,9 +21,11 @@ jobs:
         with:
           path: ~/.cache/ms-playwright
           key: pw-chromium-v1
+      - run: echo "T0=$(date +%s)" >> $GITHUB_ENV
       - run: pip install playwright playwright-stealth requests
       - run: playwright install --with-deps chromium
-      - run: python check.py
+      - id: chk
+        run: python check.py
         env:
           IG_SESSION: ${{ secrets.IG_SESSION }}
           DATA_TOKEN: ${{ secrets.DATA_TOKEN }}
@@ -29,3 +34,11 @@ jobs:
           TG_CHAT: ${{ secrets.TG_CHAT }}
           TG_THREAD_ALERT: ${{ secrets.TG_THREAD_ALERT }}
           TG_THREAD_REPORT: ${{ secrets.TG_THREAD_REPORT }}
+      # цепочка: ждём до 10 минут от старта и запускаем следующий замер (GITHUB_TOKEN может запускать workflow_dispatch)
+      - name: next
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          now=$(date +%s); wait=$(( 600 - (now - T0) )); [ $wait -gt 0 ] && sleep $wait
+          gh workflow run check.yml --repo ${{ github.repository }}
