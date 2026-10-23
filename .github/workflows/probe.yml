@@ -1,0 +1,16 @@
+name: probe
+on: workflow_dispatch
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
+      - run: pip install playwright playwright-stealth && playwright install --with-deps chromium
+      - name: runner ip region
+        run: curl -s https://ipinfo.io/json | python3 -c "import json,sys;d=json.load(sys.stdin);print('runner:',d.get('country'),d.get('org'))"
+      - run: python probe.py
+        env:
+          IG_SESSION: ${{ secrets.IG_SESSION }}
+          PROBE_USERS: ${{ secrets.PROBE_USERS }}
